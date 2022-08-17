@@ -11,6 +11,10 @@
 class ThreadTask
 {
 public:
+	bool end_flag;
+	bool error_flag;
+	std::string error_msg;
+	ThreadTask();
 	virtual void start();
 };
 
@@ -45,6 +49,7 @@ public:
 	int poolSize();
 	int bufferSize();
 	void pushTask(ThreadTask* task);
+	int runningNum();
 
 private:
 	ThreadPool(const ThreadPool& tp) = delete;

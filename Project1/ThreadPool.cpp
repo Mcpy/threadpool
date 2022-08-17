@@ -1,6 +1,10 @@
 #include "ThreadPool.h"
 
 
+ThreadTask::ThreadTask()
+	:end_flag(false),error_flag(false)
+{}
+
 void ThreadTask::start()
 {
 	std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -53,6 +57,11 @@ void ThreadPool::pushTask(ThreadTask* task)
 	cv_management.notify_one();
 }
 
+int ThreadPool::runningNum()
+{
+	return running_num;
+}
+
 void ThreadPool::work()
 {
 	while (!termination_flag)
@@ -89,20 +98,23 @@ void ThreadPool::work()
 			try
 			{
 				task->start();
+				task->end_flag = true;
 			}
 			//线程任务的异常处理，请结合项目要求自己添加
 			catch (const char* msg)
 			{
-				////////////////////////////
+				task->error_flag = true;
+				task->error_msg = msg;
 			}
 			catch (std::exception& e)
 			{
-				const char* msg = e.what();
-				/////////////////////////////
+				task->error_flag = true;
+				task->error_msg = e.what();
 			}
 			catch (...)
 			{
-				///////////////////////
+				task->error_flag = true;
+				task->error_msg = "unknown error";
 			}
 			running_num--;
 		}
