@@ -183,30 +183,30 @@ void ThreadPool::threadpoolManagement()
 				}
 			}
 			std::this_thread::yield();
-			//删除已经结束的线程
-			while (!clear_thread_id.empty())
+		}
+		//删除已经结束的线程
+		while (!clear_thread_id.empty())
+		{
+			std::thread::id thread_id;
+			std::unique_lock<std::mutex> ulock_clear_queue(mtx_clear_queue);
+			if (clear_thread_id.empty())
 			{
-				std::thread::id thread_id;
-				std::unique_lock<std::mutex> ulock_clear_queue(mtx_clear_queue);
-				if (clear_thread_id.empty())
+				break;
+			}
+			else
+			{
+				thread_id = clear_thread_id.front();
+				clear_thread_id.pop();
+			}
+			ulock_clear_queue.unlock();
+			for (auto i = thread_pool.begin(); i != thread_pool.end(); i++)
+			{
+				if (i->get_id() == thread_id)
 				{
+					if (i->joinable())
+						i->join();
+					thread_pool.erase(i);
 					break;
-				}
-				else
-				{
-					thread_id = clear_thread_id.front();
-					clear_thread_id.pop();
-				}
-				ulock_clear_queue.unlock();
-				for (auto i = thread_pool.begin(); i != thread_pool.end(); i++)
-				{
-					if (i->get_id() == thread_id)
-					{
-						if (i->joinable())
-							i->join();
-						thread_pool.erase(i);
-						break;
-					}
 				}
 			}
 		}
