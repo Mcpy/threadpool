@@ -156,8 +156,9 @@ void ThreadPool::threadpoolManagement()
 		{
 			cv_thread_pool.notify_one();
 		}
-		//如果当前的线程数大于了常驻线程数量则需要处理多余的线程
-		if (thread_pool.size() > core_pool_size)
+		//如果当前的线程数大于了常驻线程数量时则需要处理多余的线程
+		//且没有清理任务和没有要清理的线程时
+		if (thread_pool.size() > core_pool_size && !clear_flag && clear_thread_id.empty())
 		{
 			//每keep_alive_seconds检测一次
 			if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - timestamp).count() > keep_alive_seconds)
@@ -183,7 +184,7 @@ void ThreadPool::threadpoolManagement()
 			}
 			std::this_thread::yield();
 			//删除已经结束的线程
-			while (1)
+			while (!clear_thread_id.empty())
 			{
 				std::thread::id thread_id;
 				std::unique_lock<std::mutex> ulock_clear_queue(mtx_clear_queue);
