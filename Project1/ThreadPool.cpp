@@ -188,7 +188,7 @@ void ThreadPool::threadpoolManagement()
 			std::this_thread::yield();
 		}
 		//删除已经结束的线程
-		while (!clear_thread_id.empty())
+		if (!clear_thread_id.empty())
 		{
 			std::thread::id thread_id;
 			std::unique_lock<std::mutex> ulock_clear_queue(mtx_clear_queue);
