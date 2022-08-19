@@ -157,27 +157,30 @@ void ThreadPool::threadpoolManagement()
 			cv_thread_pool.notify_one();
 		}
 		//如果当前的线程数大于了常驻线程数量时则需要处理多余的线程
-		//且没有清理任务和没有要清理的线程时
-		if (thread_pool.size() > core_pool_size && !clear_flag && clear_thread_id.empty())
+		if (thread_pool.size() > core_pool_size)
 		{
-			//每keep_alive_seconds检测一次
-			if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - timestamp).count() > keep_alive_seconds)
+			//且没有清理任务和没有要清理的线程时
+			if (!clear_flag && clear_thread_id.empty())
 			{
-				timestamp = std::chrono::high_resolution_clock::now();
-				//当正在工作的线程较上个时间段少，可认为目前负载在减小，可清除多余且空闲的线程
-				//也可改为 last_running_num - running_num > a a为一个阈值
-				if (running_num < last_running_num)
+				//每keep_alive_seconds检测一次
+				if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - timestamp).count() > keep_alive_seconds)
 				{
-					int free_thread = thread_pool.size() - running_num, extra_thread = thread_pool.size() - core_pool_size;
-					need_clear_num = free_thread < extra_thread ? free_thread : extra_thread;
-					last_running_num = running_num;
-					if (need_clear_num > 0)
+					timestamp = std::chrono::high_resolution_clock::now();
+					//当正在工作的线程较上个时间段少，可认为目前负载在减小，可清除多余且空闲的线程
+					//也可改为 last_running_num - running_num > a a为一个阈值
+					if (running_num < last_running_num)
 					{
-						clear_flag = 1;
-						//唤醒需要清理的线程数量
-						for (int i = 0; i < need_clear_num; i++)
+						int free_thread = thread_pool.size() - running_num, extra_thread = thread_pool.size() - core_pool_size;
+						need_clear_num = free_thread < extra_thread ? free_thread : extra_thread;
+						last_running_num = running_num;
+						if (need_clear_num > 0)
 						{
-							cv_thread_pool.notify_one();
+							clear_flag = 1;
+							//唤醒需要清理的线程数量
+							for (int i = 0; i < need_clear_num; i++)
+							{
+								cv_thread_pool.notify_one();
+							}
 						}
 					}
 				}
