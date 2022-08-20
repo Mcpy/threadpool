@@ -6,7 +6,7 @@ ThreadPool::ThreadPool(unsigned short core_pool_size, unsigned short max_pool_si
 	:core_pool_size(core_pool_size), max_pool_size(max_pool_size), buffer_size(buffer_size), keep_alive_seconds(keep_alive_seconds), termination_flag(0), running_num(0),
 	last_running_num(0), clear_flag(0), need_clear_num(0), timestamp(std::chrono::high_resolution_clock::now()), threadpool_management(&ThreadPool::threadpoolManagement, this)
 {
-	for (auto i = 0; i < core_pool_size; i++)
+	for (int i = 0; i < core_pool_size; i++)
 	{
 		thread_pool.emplace_back(&ThreadPool::work, this);
 	}
@@ -26,14 +26,6 @@ int ThreadPool::bufferSize()
 {
 	return task_buffer.size();
 }
-
-//void ThreadPool::pushTask(ThreadTask* task)
-//{
-//	std::unique_lock<std::mutex> ulock(mtx);
-//	task_buffer.push(task);
-//	ulock.unlock();
-//	cv_management.notify_one();
-//}
 
 int ThreadPool::runningNum()
 {
