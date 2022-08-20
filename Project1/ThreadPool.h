@@ -1,4 +1,6 @@
 #pragma once
+#ifndef _CPY_THREAD_POOL_H
+#define _CPY_THREAD_POOL_H
 #include<thread>
 #include<string>
 #include<mutex>
@@ -7,29 +9,21 @@
 #include<queue>
 #include<atomic>
 #include<iostream>
-
-class ThreadTask
-{
-public:
-	bool end_flag;
-	bool error_flag;
-	std::string error_msg;
-	ThreadTask();
-	virtual void start();
-};
+#include<future>
 
 class ThreadPool
 {
 private:
-	int core_pool_size;
-	int max_pool_size;
-	int buffer_size;
-	int keep_alive_seconds;
+	using Task = std::function<void()>;
+	unsigned short core_pool_size;
+	unsigned short max_pool_size;
+	unsigned short buffer_size;
+	unsigned int keep_alive_seconds;
 	std::atomic<int> running_num;
 	std::atomic<bool> termination_flag;
 	std::condition_variable cv_thread_pool,cv_management;
 	std::mutex mtx;
-	std::queue<ThreadTask*> task_buffer;
+	std::queue<Task> task_buffer;
 	std::list<std::thread> thread_pool;
 	std::thread threadpool_management;
 
@@ -44,12 +38,16 @@ private:
 
 public:
 	//core_pool_size 常驻线程数； max_pool_size 线程池最大线程数；buffer_size 任务缓存数量，当任务缓存数量大于此设定值后线程池中线程数将增长；keep_alive_seconds 多于常驻线程数量时，多余线程的存活的最短时间
-	ThreadPool(int core_pool_size , int max_pool_size, int buffer_size, int  keep_alive_seconds);
+	ThreadPool(unsigned short core_pool_size , unsigned short max_pool_size, unsigned short buffer_size, unsigned int  keep_alive_seconds);
 	~ThreadPool();
 	int poolSize();
 	int bufferSize();
-	void pushTask(ThreadTask* task);
+	template<class Func, class... Args>
+	auto pushTask(Func&& func, Args&&... args)->std::future<decltype(func(args...)) >;
+	template<class Func, class ObjPtr, class... Args>
+	auto pushTask(Func&& func, ObjPtr objptr, Args&&... args)->std::future<decltype((objptr->*func)(args...))>;
 	int runningNum();
+	void close();
 
 private:
 	ThreadPool(const ThreadPool& tp) = delete;
@@ -59,3 +57,34 @@ private:
 
 };
 
+template<class Func, class ...Args>
+auto ThreadPool::pushTask(Func&& func, Args && ...args)->std::future<decltype(func(args...)) >
+{
+	if (termination_flag)
+		throw("ThreadPool::pushTask: This threadpool has been closed!");
+	using ReturnType = decltype(func(args...));
+	//智能指针；打包函数与参数
+	auto p_task = std::make_shared<std::packaged_task<ReturnType()>>(std::bind(std::forward<Func>(func), std::forward<Args>(args)...));
+	std::future<ReturnType> future = p_task->get_future();
+	std::unique_lock<std::mutex> ulock(mtx);
+	task_buffer.emplace([p_task]() {(*p_task)(); });
+	ulock.unlock();
+	cv_management.notify_one();
+	return future;
+}
+
+template<class Func, class ObjPtr, class ...Args>
+inline auto ThreadPool::pushTask(Func&& func, ObjPtr objptr, Args && ...args) -> std::future<decltype((objptr->*func)(args ...))>
+{
+	if (termination_flag)
+		throw("ThreadPool::pushTask: This threadpool has been closed!");
+	using ReturnType = decltype((objptr->*func)(args ...));
+	auto p_task = std::make_shared<std::packaged_task<ReturnType()>>(std::bind(std::forward<Func>(func), std::forward<ObjPtr>(objptr), std::forward<Args>(args)...));
+	std::future<ReturnType> future = p_task->get_future();
+	std::unique_lock<std::mutex> ulock(mtx);
+	task_buffer.emplace([p_task]() {(*p_task)(); });
+	ulock.unlock();
+	cv_management.notify_one();
+	return future;
+}
+#endif 

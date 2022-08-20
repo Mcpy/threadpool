@@ -1,28 +1,46 @@
 #include "ThreadPool.h"
 
 
-ThreadTask::ThreadTask()
-	:end_flag(false),error_flag(false)
-{}
 
-void ThreadTask::start()
-{
-	std::this_thread::sleep_for(std::chrono::seconds(1));
-	std::cout << "This is a ThreadTask." << std::endl;
-}
-
-
-ThreadPool::ThreadPool(int core_pool_size, int max_pool_size, int buffer_size, int keep_alive_seconds)
+ThreadPool::ThreadPool(unsigned short core_pool_size, unsigned short max_pool_size, unsigned short buffer_size, unsigned int keep_alive_seconds)
 	:core_pool_size(core_pool_size), max_pool_size(max_pool_size), buffer_size(buffer_size), keep_alive_seconds(keep_alive_seconds), termination_flag(0), running_num(0),
 	last_running_num(0), clear_flag(0), need_clear_num(0), timestamp(std::chrono::high_resolution_clock::now()), threadpool_management(&ThreadPool::threadpoolManagement, this)
 {
-	for (int i = 0; i < core_pool_size; i++)
+	for (auto i = 0; i < core_pool_size; i++)
 	{
 		thread_pool.emplace_back(&ThreadPool::work, this);
 	}
 }
 
 ThreadPool::~ThreadPool()
+{
+	close();
+}
+
+int ThreadPool::poolSize()
+{
+	return thread_pool.size();
+}
+
+int ThreadPool::bufferSize()
+{
+	return task_buffer.size();
+}
+
+//void ThreadPool::pushTask(ThreadTask* task)
+//{
+//	std::unique_lock<std::mutex> ulock(mtx);
+//	task_buffer.push(task);
+//	ulock.unlock();
+//	cv_management.notify_one();
+//}
+
+int ThreadPool::runningNum()
+{
+	return running_num;
+}
+
+void ThreadPool::close()
 {
 	termination_flag = 1;
 	cv_management.notify_one();
@@ -36,30 +54,6 @@ ThreadPool::~ThreadPool()
 			i.join();
 		}
 	}
-
-}
-
-int ThreadPool::poolSize()
-{
-	return thread_pool.size();
-}
-
-int ThreadPool::bufferSize()
-{
-	return task_buffer.size();
-}
-
-void ThreadPool::pushTask(ThreadTask* task)
-{
-	std::unique_lock<std::mutex> ulock(mtx);
-	task_buffer.push(task);
-	ulock.unlock();
-	cv_management.notify_one();
-}
-
-int ThreadPool::runningNum()
-{
-	return running_num;
 }
 
 void ThreadPool::work()
@@ -89,35 +83,12 @@ void ThreadPool::work()
 				clear_flag = 0;
 			}
 		}
-		ThreadTask* task = task_buffer.front();
+		Task task = std::move(task_buffer.front());
 		task_buffer.pop();
 		ulock.unlock();
-		if (task != nullptr)
-		{
-			running_num++;
-			try
-			{
-				task->start();
-				task->end_flag = true;
-			}
-			//线程任务的异常处理，请结合项目要求自己添加
-			catch (const char* msg)
-			{
-				task->error_flag = true;
-				task->error_msg = msg;
-			}
-			catch (std::exception& e)
-			{
-				task->error_flag = true;
-				task->error_msg = e.what();
-			}
-			catch (...)
-			{
-				task->error_flag = true;
-				task->error_msg = "unknown error";
-			}
-			running_num--;
-		}
+		running_num++;
+		task();
+		running_num--;
 	}
 }
 
@@ -136,7 +107,7 @@ void ThreadPool::threadpoolManagement()
 		ulock.unlock();
 		int free_thread = thread_pool.size() - running_num;
 		//如果任务量超过了任务缓存则需要添加线程
-		if (task_num - free_thread > buffer_size)
+		if (task_num - free_thread > (int)buffer_size)
 		{
 			int add_num = task_num-free_thread;
 			//添加数量不得超过最大线程数
@@ -215,4 +186,5 @@ void ThreadPool::threadpoolManagement()
 		}
 	}
 }
+
 

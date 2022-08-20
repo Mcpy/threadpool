@@ -22,7 +22,7 @@
     <ClInclude Include="ThreadPool.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="test.cpp" />
     <ClCompile Include="ThreadPool.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
