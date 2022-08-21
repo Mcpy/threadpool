@@ -17,17 +17,17 @@ ThreadPool::~ThreadPool()
 	close();
 }
 
-int ThreadPool::poolSize()
+int ThreadPool::poolSize() const
 {
 	return thread_pool.size();
 }
 
-int ThreadPool::bufferSize()
+int ThreadPool::bufferSize() const
 {
 	return task_buffer.size();
 }
 
-int ThreadPool::runningNum()
+int ThreadPool::runningNum() const
 {
 	return running_num;
 }

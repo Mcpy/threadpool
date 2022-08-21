@@ -40,13 +40,13 @@ public:
 	//core_pool_size 常驻线程数； max_pool_size 线程池最大线程数；buffer_size 任务缓存数量，当任务缓存数量大于此设定值后线程池中线程数将增长；keep_alive_seconds 多于常驻线程数量时，多余线程的存活的最短时间
 	ThreadPool(unsigned short core_pool_size , unsigned short max_pool_size, unsigned short buffer_size, unsigned int  keep_alive_seconds);
 	~ThreadPool();
-	int poolSize();
-	int bufferSize();
+	int poolSize() const;
+	int bufferSize() const;
 	template<class Func, class... Args>
 	auto pushTask(Func&& func, Args&&... args)->std::future<decltype(func(args...)) >;
 	template<class Func, class ObjPtr, class... Args>
 	auto pushTask(Func&& func, ObjPtr&& objptr, Args&&... args)->std::future<decltype((objptr->*func)(args...))>;
-	int runningNum();
+	int runningNum() const;
 	void close();
 
 private:
