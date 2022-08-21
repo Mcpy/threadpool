@@ -155,15 +155,8 @@ void ThreadPool::threadpoolManagement()
 		{
 			std::thread::id thread_id;
 			std::unique_lock<std::mutex> ulock_clear_queue(mtx_clear_queue);
-			if (clear_thread_id.empty())
-			{
-				break;
-			}
-			else
-			{
-				thread_id = clear_thread_id.front();
-				clear_thread_id.pop();
-			}
+			thread_id = clear_thread_id.front();
+			clear_thread_id.pop();
 			ulock_clear_queue.unlock();
 			for (auto i = thread_pool.begin(); i != thread_pool.end(); i++)
 			{
