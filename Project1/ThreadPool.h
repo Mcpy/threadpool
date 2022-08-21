@@ -45,7 +45,7 @@ public:
 	template<class Func, class... Args>
 	auto pushTask(Func&& func, Args&&... args)->std::future<decltype(func(args...)) >;
 	template<class Func, class ObjPtr, class... Args>
-	auto pushTask(Func&& func, ObjPtr objptr, Args&&... args)->std::future<decltype((objptr->*func)(args...))>;
+	auto pushTask(Func&& func, ObjPtr&& objptr, Args&&... args)->std::future<decltype((objptr->*func)(args...))>;
 	int runningNum();
 	void close();
 
@@ -74,7 +74,7 @@ auto ThreadPool::pushTask(Func&& func, Args && ...args)->std::future<decltype(fu
 }
 
 template<class Func, class ObjPtr, class ...Args>
-auto ThreadPool::pushTask(Func&& func, ObjPtr objptr, Args && ...args) -> std::future<decltype((objptr->*func)(args ...))>
+auto ThreadPool::pushTask(Func&& func, ObjPtr&& objptr, Args && ...args) -> std::future<decltype((objptr->*func)(args ...))>
 {
 	if (termination_flag)
 		throw("ThreadPool::pushTask: This threadpool has been closed!");
