@@ -115,9 +115,16 @@ void ThreadPool::threadpoolManagement()
 			{
 				add_num = max_pool_size - thread_pool.size();
 			}
-			for (int i = 0; i < add_num; i++)
+			try
 			{
-				thread_pool.emplace_back(&ThreadPool::work, this);
+				for (int i = 0; i < add_num; i++)
+				{
+					thread_pool.emplace_back(&ThreadPool::work, this);
+				}
+			}
+			catch (...)
+			{
+				//warning
 			}
 			timestamp = std::chrono::high_resolution_clock::now();
 			last_running_num = running_num;
